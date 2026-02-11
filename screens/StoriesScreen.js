@@ -13,6 +13,7 @@ import { FlashList } from '@shopify/flash-list';
 import { Image as ExpoImage } from 'expo-image';
 import { Video, ResizeMode } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
+import { useIsFocused } from '@react-navigation/native';
 import Colors from '../constants/Colors';
 import { getSignedObjectUrl } from '../s3API';
 import dayjs from '../utils/dayjs';
@@ -22,7 +23,7 @@ const Parse = require('parse/react-native');
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const STORY_HEIGHT = SCREEN_HEIGHT - 180;
 
-// Memoized Story Item Component - passes primitives for effective memoization
+// Memoized Story Item Component
 const StoryItem = memo(function StoryItem({
   id,
   autorName,
@@ -34,9 +35,13 @@ const StoryItem = memo(function StoryItem({
   textColor,
   timeAgo,
   isVisible,
+  isMuted,
   onVideoRef,
+  onTogglePause,
+  onToggleMute,
 }) {
   const videoRef = useRef(null);
+  const [isPaused, setIsPaused] = useState(false);
 
   useEffect(() => {
     if (videoRef.current) {
@@ -46,17 +51,26 @@ const StoryItem = memo(function StoryItem({
 
   useEffect(() => {
     if (mediaType === 'video' && videoRef.current) {
-      if (isVisible) {
+      if (isVisible && !isPaused) {
         videoRef.current.playAsync();
       } else {
         videoRef.current.pauseAsync();
-        videoRef.current.setPositionAsync(0);
+        if (!isVisible) {
+          videoRef.current.setPositionAsync(0);
+          setIsPaused(false);
+        }
       }
     }
-  }, [isVisible, mediaType]);
+  }, [isVisible, mediaType, isPaused]);
+
+  const handleTap = useCallback(() => {
+    if (mediaType !== 'video') return;
+    setIsPaused((prev) => !prev);
+    if (onTogglePause) onTogglePause(id);
+  }, [mediaType, id, onTogglePause]);
 
   return (
-    <View style={styles.storyContainer}>
+    <Pressable style={styles.storyContainer} onPress={handleTap}>
       {mediaType === 'video' && mediaUrl ? (
         <Video
           key={id}
@@ -64,9 +78,9 @@ const StoryItem = memo(function StoryItem({
           source={{ uri: mediaUrl }}
           style={styles.media}
           resizeMode={ResizeMode.COVER}
-          shouldPlay={isVisible}
+          shouldPlay={isVisible && !isPaused}
           isLooping
-          isMuted={false}
+          isMuted={isMuted}
           posterSource={{ uri: mediaUrl }}
           usePoster
         />
@@ -85,6 +99,16 @@ const StoryItem = memo(function StoryItem({
         </View>
       )}
 
+      {/* Pause overlay for videos */}
+      {mediaType === 'video' && isPaused && isVisible && (
+        <View style={styles.pauseOverlay}>
+          <View style={styles.pauseIconCircle}>
+            <Ionicons name="play" size={40} color="#FFF" />
+          </View>
+        </View>
+      )}
+
+      {/* Text overlay */}
       {textOverlay && textPositionY !== null ? (
         <View
           style={[
@@ -106,6 +130,7 @@ const StoryItem = memo(function StoryItem({
         </View>
       ) : null}
 
+      {/* Author info + mute button */}
       <View style={styles.authorOverlay}>
         <View style={styles.authorRow}>
           <Ionicons name="person-circle-outline" size={28} color="#FFF" />
@@ -115,7 +140,25 @@ const StoryItem = memo(function StoryItem({
           </View>
         </View>
       </View>
-    </View>
+
+      {/* Mute/unmute button for videos */}
+      {mediaType === 'video' && isVisible && (
+        <Pressable
+          style={styles.muteButton}
+          onPress={(e) => {
+            e.stopPropagation?.();
+            onToggleMute();
+          }}
+          hitSlop={12}
+        >
+          <Ionicons
+            name={isMuted ? 'volume-mute' : 'volume-high'}
+            size={20}
+            color="#FFF"
+          />
+        </Pressable>
+      )}
+    </Pressable>
   );
 });
 
@@ -125,6 +168,9 @@ export default function StoriesScreen({ navigation }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [visibleIndex, setVisibleIndex] = useState(0);
   const [hasStories, setHasStories] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
+
+  const isFocused = useIsFocused();
 
   const currentUserRef = useRef(null);
   const currentEscuelaRef = useRef(null);
@@ -134,6 +180,28 @@ export default function StoriesScreen({ navigation }) {
   useEffect(() => {
     initializeScreen();
   }, []);
+
+  // Pause all videos when tab loses focus
+  useEffect(() => {
+    if (!isFocused) {
+      videoRefsMap.current.forEach((ref) => {
+        try {
+          ref.pauseAsync();
+        } catch (_) {}
+      });
+    } else {
+      // Resume the visible video when tab regains focus
+      const visibleStory = stories[visibleIndex];
+      if (visibleStory?.mediaType === 'video') {
+        const ref = videoRefsMap.current.get(visibleStory.id);
+        if (ref) {
+          try {
+            ref.playAsync();
+          } catch (_) {}
+        }
+      }
+    }
+  }, [isFocused, visibleIndex, stories]);
 
   const initializeScreen = async () => {
     try {
@@ -268,6 +336,10 @@ export default function StoriesScreen({ navigation }) {
     videoRefsMap.current.set(id, ref);
   }, []);
 
+  const handleToggleMute = useCallback(() => {
+    setIsMuted((prev) => !prev);
+  }, []);
+
   const onRefresh = useCallback(async () => {
     setIsRefreshing(true);
     viewedStoriesRef.current.clear();
@@ -279,7 +351,7 @@ export default function StoriesScreen({ navigation }) {
   }, []);
 
   const renderStoryItem = useCallback(({ item, index, extraData }) => {
-    const isVisible = index === extraData;
+    const isVisible = index === extraData.visibleIndex && extraData.isFocused;
 
     return (
       <StoryItem
@@ -293,10 +365,12 @@ export default function StoriesScreen({ navigation }) {
         textColor={item.textColor}
         timeAgo={item.timeAgo}
         isVisible={isVisible}
+        isMuted={isMuted}
         onVideoRef={handleVideoRef}
+        onToggleMute={handleToggleMute}
       />
     );
-  }, [handleVideoRef]);
+  }, [handleVideoRef, isMuted, handleToggleMute]);
 
   const keyExtractor = useCallback((item) => item.id, []);
 
@@ -305,6 +379,8 @@ export default function StoriesScreen({ navigation }) {
     offset: STORY_HEIGHT * index,
     index,
   }), []);
+
+  const extraData = { visibleIndex, isFocused };
 
   if (isLoading) {
     return (
@@ -344,7 +420,7 @@ export default function StoriesScreen({ navigation }) {
           data={stories}
           renderItem={renderStoryItem}
           keyExtractor={keyExtractor}
-          extraData={visibleIndex}
+          extraData={extraData}
           estimatedItemSize={STORY_HEIGHT}
           pagingEnabled
           showsVerticalScrollIndicator={false}
@@ -416,6 +492,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  pauseOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.25)',
+  },
+  pauseIconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingLeft: 4,
+  },
   textOverlay: {
     position: 'absolute',
     left: 0,
@@ -461,6 +552,17 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
   },
+  muteButton: {
+    position: 'absolute',
+    bottom: 88,
+    right: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -492,18 +594,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     marginTop: 8,
-  },
-  refreshButton: {
-    marginTop: 24,
-    backgroundColor: Colors.bluejeansLight,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  refreshButtonText: {
-    color: '#FFF',
-    fontWeight: '600',
-    fontSize: 16,
   },
   progressContainer: {
     flexDirection: 'row',

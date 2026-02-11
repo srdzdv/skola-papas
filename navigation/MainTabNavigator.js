@@ -131,8 +131,8 @@ function BottomTabs() {
         switch (route.name) {
           case 'ComunicacionStack':
             return <Ionicons name="chatbubbles" size={24} color={Colors.darkGrayDark} />;
-          // case 'HistoriasStack':
-          //   return <Ionicons name="play-circle" size={24} color={Colors.darkGrayDark} />;
+          case 'HistoriasStack':
+            return <Ionicons name="play-circle" size={24} color={Colors.darkGrayDark} />;
           case 'AdminStack':
             return <Ionicons name="calculator" size={24} color={Colors.darkGrayDark} />;
           case 'EventosStack':
@@ -151,10 +151,10 @@ function BottomTabs() {
       name="ComunicacionStack"
       component={ComunicacionStack}
       options={{tabBarLabel: 'Com'}} />
-      {/* <BottomTab.Screen
+      <BottomTab.Screen
       name="HistoriasStack"
       component={HistoriasStack}
-      options={{tabBarLabel: 'Historias'}} /> */}
+      options={{tabBarLabel: 'Historias'}} />
       <BottomTab.Screen
       name="AdminStack"
       component={AdminStack}

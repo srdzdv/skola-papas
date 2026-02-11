@@ -1,0 +1,36 @@
+{
+    "cli": {
+      "version": ">= 7.3.0"
+    },
+    "build": {
+      "development": {
+        "distribution": "internal",
+        "channel": "development",
+        "android": {
+          "gradleCommand": ":app:assembleDebug"
+        },
+        "ios": {
+          "buildConfiguration": "Debug"
+        }
+      },
+      "preview": {
+        "distribution": "internal",
+        "channel": "preview"
+      },
+      "production": {
+        "channel": "production",
+        "android": {
+          "env": {
+            "GRADLE_OPTS": "-Dorg.gradle.internal.http.connectionTimeout=600000 -Dorg.gradle.internal.http.socketTimeout=600000 -Dorg.gradle.daemon=true -Dorg.gradle.parallel=true -Dorg.gradle.caching=true"
+          }
+        },
+        "ios": {
+          "image": "macos-sequoia-15.3-xcode-16.2"
+        }
+      }
+    },
+    "submit": {
+      "production": {}
+    }
+  }
+  

@@ -1,0 +1,93 @@
+{
+  "expo": {
+    "name": "Skola Papás",
+    "slug": "SkolaLite",
+    "version": "3.5.5",
+    "newArchEnabled": true,
+    "platforms": [
+      "ios",
+      "android"
+    ],
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/images/splashSkola@2x.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#5D9CEC"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "mx.nieu.skolalite",
+      "userInterfaceStyle": "light",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Esta app requiere el uso de la cámara para poder leer códigos QR que se encuentran en las tarjetas que la escuela les proporciona. También para adjuntar imágenes en mensajes que sean enviados por el usuario. Privacy Policy URL: http://nieu.mx/skolaMexico/skolaPoliticasPrivacidad.html",
+        "NSPhotoLibraryUsageDescription": "Esta app requiere el acceso al álbum de fotos para poder adjuntar imágenes en mensajes que sean enviados por el usuario. Privacy Policy URL: http://nieu.mx/skolaMexico/skolaPoliticasPrivacidad.html",
+        "NSPhotoLibraryAddUsageDescription": "La app requiere permiso para guardar imágenes a su carrete de fotos.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "mx.nieu.skolalite",
+      "versionCode": 151,
+      "userInterfaceStyle": "light",
+      "permissions": [
+        "CAMERA",
+        "ACCESS_FINE_LOCATION",
+        "MANAGE_DOCUMENTS",
+        "WRITE_EXTERNAL_STORAGE",
+        "android.permission.CAMERA"
+      ],
+      "blockedPermissions": [
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/f6b1a070-ae7a-11e9-8ada-13a9b287821f"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "f6b1a070-ae7a-11e9-8ada-13a9b287821f"
+      }
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera",
+          "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone",
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "La aplicación accede a tus fotos para permitirte compartirlas con tu comunidad escolar.",
+          "cameraPermission": "Permitir que $(PRODUCT_NAME) acceda a tu cámara"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "newArchEnabled": true
+          },
+          "android": {
+            "newArchEnabled": true
+          }
+        }
+      ],
+      "./plugins/withGradleTimeout.js"
+    ]
+  }
+}
